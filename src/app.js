@@ -3,6 +3,11 @@ import cors from "cors";
 import helmet from "helmet";
 import { requestLogger } from "./middlewares/LoggerMiddleware.js";
 import { errorHandler, notFoundHandler } from "./middlewares/ErrorMiddleware.js";
+// import { db } from "./config/Database.js";
+
+// (async()=>{
+//     await db.sync();
+// })()
 
 const app = express();
 

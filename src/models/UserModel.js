@@ -1,8 +1,9 @@
-import { DataTypes } from "sequelize";
+import { DataTypes, Model } from "sequelize";
 import { db } from "../config/Database.js";
 
-const User = db.define(
-  "User",
+class User extends Model {}
+
+User.init(
   {
     id: {
       type: DataTypes.UUID,
@@ -17,21 +18,24 @@ const User = db.define(
       type: DataTypes.STRING,
       allowNull: false,
       unique: true,
-      validate: {
-        isEmail: true,
-      },
     },
     password: {
       type: DataTypes.STRING,
       allowNull: false,
     },
-    isVerified: {
+    is_verified: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
     },
+    verification_token: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
   },
   {
-    freezeTableName: true,
+    sequelize: db,
+    tableName: "users",
+    timestamps: false,
   }
 );
 
