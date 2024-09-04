@@ -1,5 +1,7 @@
+// Database.js
 import { Sequelize } from "sequelize";
 import dotenv from "dotenv";
+import setupModels from "../models/index.js";
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}.local` });
 
@@ -18,10 +20,13 @@ const db = new Sequelize(databaseUrl, {
 
 async function connectToDatabase() {
   try {
-    // Mencoba untuk menghubungkan ke database
     await db.authenticate();
     console.log("Connection has been established successfully.");
-    
+
+    setupModels(db); // Inisialisasi dan relasi model setelah db terhubung
+
+    // await db.sync({ alter: true });
+    // console.log("Database synchronized successfully.");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
     throw error;

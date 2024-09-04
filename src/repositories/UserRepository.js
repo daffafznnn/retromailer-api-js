@@ -1,5 +1,5 @@
-import BaseRepository from "../common/BaseRepository";
-import User from "../models/UserModel";
+import BaseRepository from "../common/BaseRepository.js";
+import { User } from "../models/UserModel.js";
 
 
 class UserRepository extends BaseRepository {
@@ -14,6 +14,15 @@ class UserRepository extends BaseRepository {
     const user = await this.findByEmail(email);
     return !!user;
   }
+
+  async findByEmail(email) {
+    return this.model.findOne({ where: { email } });
+  }
+
+  async findByVerificationToken(token) {
+    return this.model.findOne({ where: { verification_token: token } });
+  }
+
 }
 
 export default new UserRepository();

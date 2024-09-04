@@ -1,13 +1,12 @@
 import app from "./app.js";
 import dotenv from "dotenv";
 import logger from "./utils/logger.js";
+import { connectToDatabase } from "./config/Database.js";
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV || "development" }.local` });
 
 const startServer = async () => {
   try {
-    const { connectToDatabase } = await import("./config/Database.js");
-
     await connectToDatabase();
 
     const PORT = process.env.PORT || 5000;

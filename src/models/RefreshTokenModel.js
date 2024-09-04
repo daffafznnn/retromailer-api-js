@@ -1,10 +1,10 @@
 import { DataTypes, Model } from "sequelize";
 import { User } from "./UserModel.js";
 
-class Email extends Model {}
+class RefreshToken extends Model { }
 
-const defineEmail = (sequelize) => {
-  Email.init(
+const defineRefreshToken = (sequelize) => {
+  RefreshToken.init(
     {
       id: {
         type: DataTypes.UUID,
@@ -21,26 +21,21 @@ const defineEmail = (sequelize) => {
         onUpdate: "CASCADE",
         onDelete: "CASCADE",
       },
-      subject: {
+      token: {
         type: DataTypes.STRING,
         allowNull: false,
       },
-      body: {
-        type: DataTypes.TEXT,
-        allowNull: true,
-      },
-      status: {
-        type: DataTypes.ENUM("draft", "sent", "failed"),
-        defaultValue: "draft",
+      expires_at: {
+        type: DataTypes.DATE,
         allowNull: false,
       },
     },
     {
       sequelize,
-      tableName: "emails",
-      timestamps: true,
+      tableName: "refresh_tokens",
+      timestamps: true, // atau false, tergantung apakah Anda ingin mencatat waktu pembuatan dan pembaruan
     }
   );
 };
 
-export { Email, defineEmail };
+export { RefreshToken, defineRefreshToken };
