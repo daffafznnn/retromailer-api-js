@@ -1,3 +1,4 @@
+// src/controllers/AuthController.js
 import AuthService from "../services/AuthService.js";
 import handleError from "../utils/handleErrorController.js";
 
@@ -7,18 +8,13 @@ class AuthController {
     this.handleError = handleError;
   }
 
-
   // Handle registration
   async registerUser(req, res) {
     try {
-      const { username, email, password } = req.body;
-      const user = await this.authService.registerUser(
-        { username, email, password },
-        req
-      );
+      const user = await this.authService.registerUser(req.body, req);
       res.status(201).json({
-        status: "success",
-        data: user,
+        status: true,
+        payload: user,
         message: "User registered successfully. Please verify your email.",
       });
     } catch (error) {
@@ -28,15 +24,16 @@ class AuthController {
 
   // Handle login
   async loginUser(req, res) {
+    const { email, password } = req.body;
+
     try {
-      const { email, password } = req.body;
       const { accessToken, refreshToken } = await this.authService.loginUser(
         email,
         password
       );
       res.status(200).json({
-        status: "success",
-        data: { accessToken, refreshToken },
+        status: true,
+        payload: { accessToken, refreshToken },
         message: "Login successful.",
       });
     } catch (error) {
@@ -46,12 +43,13 @@ class AuthController {
 
   // Handle email verification
   async verifyEmail(req, res) {
+    const { token } = req.query;
+
     try {
-      const { token } = req.query;
       const user = await this.authService.verifyEmail(token);
       res.status(200).json({
-        status: "success",
-        data: user,
+        status: true,
+        payload: user,
         message: "Email verified successfully.",
       });
     } catch (error) {
@@ -61,14 +59,23 @@ class AuthController {
 
   // Handle token refresh
   async refreshToken(req, res) {
+    const { refreshToken } = req.body;
+
     try {
-      const { refreshToken } = req.body;
+      // Validasi input
+      if (!refreshToken) {
+        return res.status(400).json({
+          status: false,
+          message: "Refresh token is required.",
+        });
+      }
+
       const { accessToken } = await this.authService.refreshAccessToken(
         refreshToken
       );
       res.status(200).json({
-        status: "success",
-        data: { accessToken },
+        status: true,
+        payload: { accessToken },
         message: "Access token refreshed successfully.",
       });
     } catch (error) {

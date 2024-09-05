@@ -2,23 +2,35 @@ import nodemailer from "nodemailer";
 import UserRepository from "../repositories/UserRepository.js";
 import crypto from "crypto";
 import dotenv from "dotenv";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+import fs from "fs";
 
-dotenv.config();
+// Load environment variables from the appropriate .env file
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}.local` });
+
+// Get the directory name of the current module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 class EmailService {
   constructor() {
     this.userRepository = UserRepository;
     this.transporter = nodemailer.createTransport({
-      host: "smtp-relay.brevo.com",
-      port: 587,
+      service: "gmail",
       auth: {
-        user: process.env.SENDINBLUE_USER,
-        pass: process.env.SENDINBLUE_PASSWORD,
+        user: process.env.GMAIL_USER,
+        pass: process.env.GMAIL_PASS,
       },
     });
+
+    // Read email template from file
+    this.emailTemplate = fs.readFileSync(
+      `${__dirname}/../templates/email-template-verify.html`,
+      "utf8"
+    );
   }
 
-  // Generate verification token and send email
   async sendVerificationEmail(user, req) {
     // Generate a unique verification token
     const token = crypto.randomBytes(32).toString("hex");
@@ -30,15 +42,20 @@ class EmailService {
     // Create a verification URL using req.protocol and req.get('host')
     const verificationUrl = `${req.protocol}://${req.get(
       "host"
-    )}/verify-email?token=${token}`;
+    )}/api/v1/auth/verify-email?token=${token}`;
+
+    // Replace placeholder in email template
+    const htmlContent = this.emailTemplate.replace(
+      "{{verificationUrl}}",
+      verificationUrl
+    );
 
     // Email options
     const mailOptions = {
-      from: `"No Reply" <${process.env.SENDINBLUE_SENDER}>`,
+      from: process.env.GMAIL_USER,
       to: user.email,
       subject: "Please verify your email",
-      html: `<p>Thank you for registering. Please click the following link to verify your email:</p>
-             <a href="${verificationUrl}">${verificationUrl}</a>`,
+      html: htmlContent,
     };
 
     // Send email

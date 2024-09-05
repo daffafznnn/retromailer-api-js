@@ -1,4 +1,7 @@
 import jwt from "jsonwebtoken";
+import dotenv from "dotenv";
+
+dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}.local` });
 
 // Ambil secret key dari environment variable
 const ACCESS_TOKEN_SECRET =

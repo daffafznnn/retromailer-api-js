@@ -1,13 +1,15 @@
+// src/services/AuthService.js
 import UserRepository from "../repositories/UserRepository.js";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository.js";
-import { validateEmail, validatePassword } from "../utils/validators.js";
-import { hashPassword } from "../utils/passwordHash.js";
+import { hashPassword, comparePassword } from "../utils/passwordHash.js";
 import {
   generateAccessToken,
   generateRefreshToken,
   verifyToken,
 } from "../utils/token.js";
 import EmailService from "./EmailService.js";
+import HttpError from "../utils/httpError.js";
+import removeSensitiveFields from "../utils/removeSensitiveFields.js";
 
 class AuthService {
   constructor() {
@@ -18,19 +20,24 @@ class AuthService {
   // Method untuk memvalidasi input pengguna
   static validateInput(email, password) {
     const errors = [];
-    if (!validateEmail(email)) {
+    if (!email || !email.includes("@")) {
       errors.push("Invalid email format.");
     }
-    if (!validatePassword(password)) {
+    if (!password || password.length < 6) {
       errors.push("Password must be at least 6 characters long.");
     }
+
+    if (!email || !password) {
+      throw { statusCode: 400, message: "Email and password are required." };
+    }
     if (errors.length > 0) {
-      throw new Error(errors.join(" "));
+      throw { statusCode: 400, message: errors.join(" ") };
     }
   }
 
   // Register a new user
   async registerUser({ username, email, password }, req) {
+    let newUser;
     try {
       // Validasi input
       AuthService.validateInput(email, password);
@@ -38,14 +45,14 @@ class AuthService {
       // Periksa apakah email sudah terdaftar
       const existingUser = await this.userRepository.findByEmail(email);
       if (existingUser) {
-        throw new Error("Email already in use.");
+        throw { statusCode: 400, message: "Email already in use." };
       }
 
       // Hash password
       const hashedPassword = await hashPassword(password);
 
       // Simpan pengguna baru
-      const newUser = await this.userRepository.create({
+      newUser = await this.userRepository.create({
         username,
         email,
         password: hashedPassword,
@@ -54,9 +61,17 @@ class AuthService {
       // Kirim email verifikasi
       await EmailService.sendVerificationEmail(newUser, req);
 
-      return newUser;
+      return removeSensitiveFields(newUser);
     } catch (error) {
-      throw new Error(`Registration failed: ${error.message}`);
+      // Jika ada error, hapus pengguna yang baru saja didaftarkan
+      if (newUser) {
+        await this.userRepository.delete(newUser.id);
+      }
+
+      throw {
+        statusCode: error.statusCode || 500,
+        message: `Registration failed: ${error.message}`,
+      };
     }
   }
 
@@ -68,8 +83,13 @@ class AuthService {
 
       // Temukan pengguna berdasarkan email
       const user = await this.userRepository.findByEmail(email);
-      if (!user || !((await hashPassword(password)) === user.password)) {
-        throw new Error("Invalid email or password.");
+
+      if (!user) {
+        throw new HttpError(404, "User not found."); // Menggunakan HttpError di sini
+      }
+
+      if (!(await comparePassword(password, user.password))) {
+        throw new HttpError(401, "Invalid email or password."); // Menggunakan HttpError di sini
       }
 
       // Generate tokens
@@ -85,7 +105,10 @@ class AuthService {
 
       return { accessToken, refreshToken };
     } catch (error) {
-      throw new Error(`Login failed: ${error.message}`);
+      throw new HttpError(
+        error.statusCode || 500,
+        `Login failed: ${error.message}`
+      ); // Menggunakan HttpError di sini
     }
   }
 
@@ -95,7 +118,7 @@ class AuthService {
       // Temukan pengguna dengan token verifikasi yang sesuai
       const user = await this.userRepository.findByVerificationToken(token);
       if (!user) {
-        throw new Error("Invalid or expired verification token.");
+        throw new HttpError(400, "Invalid or expired verification token."); // Menggunakan HttpError di sini
       }
 
       // Perbarui status verifikasi pengguna
@@ -106,9 +129,12 @@ class AuthService {
         verification_token: user.verification_token,
       });
 
-      return user;
+      return removeSensitiveFields(user);
     } catch (error) {
-      throw new Error(`Email verification failed: ${error.message}`);
+      throw new HttpError(
+        error.statusCode || 500,
+        `Email verification failed: ${error.message}`
+      ); // Menggunakan HttpError di sini
     }
   }
 
@@ -122,7 +148,7 @@ class AuthService {
       );
 
       if (!tokenRecord || tokenRecord.expires_at < new Date()) {
-        throw new Error("Invalid or expired refresh token.");
+        throw new HttpError(400, "Invalid or expired refresh token."); // Menggunakan HttpError di sini
       }
 
       // Generate new access token
@@ -130,7 +156,10 @@ class AuthService {
 
       return { accessToken };
     } catch (error) {
-      throw new Error(`Token refresh failed: ${error.message}`);
+      throw new HttpError(
+        error.statusCode || 500,
+        `Token refresh failed: ${error.message}`
+      ); // Menggunakan HttpError di sini
     }
   }
 }

@@ -1,16 +1,12 @@
+// src/utils/handleErrorController.js
 
 function handleError(res, error) {
-    if (error instanceof Error) {
-      return res.status(400).json({
-        status: "error",
-        message: error.message,
-      });
-    } else {
-      return res.status(500).json({
-        status: "error",
-        message: "An unknown error occurred",
-      });
-    }
+  const statusCode = error.statusCode || 500;
+  return res.status(statusCode).json({
+    status: false,
+    message: error.message || "An unknown error occurred",
+    code: error.code,
+  });
 }
 
 export default handleError;

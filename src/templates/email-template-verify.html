@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Email Verifikasi</title>
+    <style>
+        /* Global Reset */
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+
+        /* Container */
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Header */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            background-color: #007bff;
+            padding: 20px;
+            border-radius: 8px 8px 0 0;
+            color: #fff;
+        }
+
+        .header h1 {
+            font-size: 24px;
+            margin: 0;
+        }
+
+        /* Content */
+        .content {
+            padding: 20px;
+            background-color: #fafafa;
+            border-radius: 0 0 8px 8px;
+        }
+
+        .message {
+            margin-bottom: 20px;
+        }
+
+        .cta-button {
+            display: inline-block;
+            padding: 10px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #fff;
+            background-color: #007bff;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .cta-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center;
+            font-size: 14px;
+            color: #777;
+            margin-top: 20px;
+        }
+
+        .footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>Selamat! Verifikasi Email Anda Diperlukan.</h1>
+        </div>
+
+        <!-- Content -->
+        <div class="content">
+            <div class="message">
+                <p>Terima kasih telah mendaftar. Untuk menyelesaikan proses pendaftaran Anda, mohon klik link berikut untuk memverifikasi email Anda:</p>
+                <a href="{{verificationUrl}}" class="cta-button">Click to Verify</a>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <p>Jika Anda tidak melakukan pendaftaran, harap abaikan email ini.</p>
+            <p>&copy; ${new Date().getFullYear()} Retromailer. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
