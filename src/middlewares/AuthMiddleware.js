@@ -11,6 +11,7 @@ const AuthMiddleware = {
     try {
       const decoded = verifyToken(token, "access"); // Memverifikasi token menggunakan verifyToken
       req.user = decoded; // Menyimpan informasi pengguna yang terdekode ke dalam req.user
+      req.userId = decoded.id;
       next();
     } catch (error) {
       return res.status(401).json({ message: "Invalid token." });

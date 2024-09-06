@@ -162,6 +162,64 @@ class AuthService {
       ); // Menggunakan HttpError di sini
     }
   }
+
+  async logoutUser(refreshToken) {
+    try {
+      // Verifikasi refresh token
+      const payload = verifyToken(refreshToken, "refresh");
+
+      // Cari refresh token yang sesuai di database
+      const tokenRecord = await this.refreshTokenRepository.findByToken(
+        refreshToken
+      );
+
+      // Jika refresh token tidak ditemukan atau sudah kadaluarsa, lempar error
+      if (!tokenRecord || tokenRecord.expires_at < new Date()) {
+        throw new HttpError(400, "Invalid or expired refresh token.");
+      }
+
+      // Hapus refresh token dari database
+      await this.refreshTokenRepository.deleteByToken(refreshToken);
+
+      return { message: "Successfully logged out." };
+    } catch (error) {
+      throw new HttpError(
+        error.statusCode || 500,
+        `Logout failed: ${error.message}`
+      );
+    }
+  }
+
+  // Handle Google login
+  async handleGoogleLogin(user, tokens) {
+    try {
+      // Save user and tokens
+      const { accessToken, refreshToken } = tokens;
+      const existingUser = await UserRepository.findByEmail(user.email);
+      if (!existingUser) {
+        await UserRepository.create({
+          username: user.displayName,
+          email: user.email,
+          password: null, // Set null for Google login
+          is_verified: true, // Assume user is verified
+        });
+      }
+
+      // Save refresh token
+      await RefreshTokenRepository.create({
+        user_id: existingUser.id,
+        token: refreshToken,
+        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+      });
+
+      return { accessToken, refreshToken };
+    } catch (error) {
+      throw new HttpError(
+        error.statusCode || 500,
+        `Google login failed: ${error.message}`
+      );
+    }
+  }
 }
 
 export default new AuthService();

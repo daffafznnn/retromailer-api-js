@@ -6,9 +6,6 @@ class UserRepository extends BaseRepository {
   constructor() {
     super(User);
   }
-  async findByEmail(email) {
-    return this.model.findOne({ where: { email } });
-  }
 
   async isEmailRegistered(email) {
     const user = await this.findByEmail(email);
@@ -21,6 +18,10 @@ class UserRepository extends BaseRepository {
 
   async findByVerificationToken(token) {
     return this.model.findOne({ where: { verification_token: token } });
+  }
+
+  async findByGoogleId(id) {
+    return this.model.findOne({ where: { googleId: id } });
   }
 
 }

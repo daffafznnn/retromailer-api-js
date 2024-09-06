@@ -52,7 +52,8 @@ class EmailService {
 
     // Email options
     const mailOptions = {
-      from: process.env.GMAIL_USER,
+      // from: process.env.GMAIL_USER,
+      from: 'daffafauzan0r@gmail.com',
       to: user.email,
       subject: "Please verify your email",
       html: htmlContent,
@@ -61,7 +62,6 @@ class EmailService {
     // Send email
     try {
       await this.transporter.sendMail(mailOptions);
-      console.log("Verification email sent.");
     } catch (error) {
       console.error("Error sending verification email:", error);
       throw new Error("Failed to send verification email.");
