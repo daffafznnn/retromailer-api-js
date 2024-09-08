@@ -2,10 +2,6 @@ import UserRepository from "../repositories/UserRepository.js";
 
 class UserService {
 
-  constructor() {
-    this.userRepository = UserRepository;
-  }
-
   
 }
 

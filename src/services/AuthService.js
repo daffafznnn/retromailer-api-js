@@ -10,13 +10,9 @@ import {
 import EmailService from "./EmailService.js";
 import HttpError from "../utils/httpError.js";
 import removeSensitiveFields from "../utils/removeSensitiveFields.js";
+import OAuth2Repository from "../repositories/OAuth2Repository.js";
 
 class AuthService {
-  constructor() {
-    this.userRepository = UserRepository;
-    this.refreshTokenRepository = RefreshTokenRepository;
-  }
-
   // Method untuk memvalidasi input pengguna
   static validateInput(email, password) {
     const errors = [];
@@ -43,7 +39,7 @@ class AuthService {
       AuthService.validateInput(email, password);
 
       // Periksa apakah email sudah terdaftar
-      const existingUser = await this.userRepository.findByEmail(email);
+      const existingUser = await UserRepository.findByEmail(email);
       if (existingUser) {
         throw { statusCode: 400, message: "Email already in use." };
       }
@@ -52,7 +48,7 @@ class AuthService {
       const hashedPassword = await hashPassword(password);
 
       // Simpan pengguna baru
-      newUser = await this.userRepository.create({
+      newUser = await UserRepository.create({
         username,
         email,
         password: hashedPassword,
@@ -65,7 +61,7 @@ class AuthService {
     } catch (error) {
       // Jika ada error, hapus pengguna yang baru saja didaftarkan
       if (newUser) {
-        await this.userRepository.delete(newUser.id);
+        await UserRepository.delete(newUser.id);
       }
 
       throw {
@@ -82,14 +78,14 @@ class AuthService {
       AuthService.validateInput(email, password);
 
       // Temukan pengguna berdasarkan email
-      const user = await this.userRepository.findByEmail(email);
+      const user = await UserRepository.findByEmail(email);
 
       if (!user) {
-        throw new HttpError(404, "User not found."); // Menggunakan HttpError di sini
+        throw new HttpError(404, "User not found.");
       }
 
       if (!(await comparePassword(password, user.password))) {
-        throw new HttpError(401, "Invalid email or password."); // Menggunakan HttpError di sini
+        throw new HttpError(401, "Invalid email or password.");
       }
 
       // Generate tokens
@@ -97,7 +93,7 @@ class AuthService {
       const refreshToken = generateRefreshToken(user.id);
 
       // Simpan refresh token
-      await this.refreshTokenRepository.create({
+      await RefreshTokenRepository.create({
         user_id: user.id,
         token: refreshToken,
         expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
@@ -108,7 +104,7 @@ class AuthService {
       throw new HttpError(
         error.statusCode || 500,
         `Login failed: ${error.message}`
-      ); // Menggunakan HttpError di sini
+      );
     }
   }
 
@@ -116,15 +112,15 @@ class AuthService {
   async verifyEmail(token) {
     try {
       // Temukan pengguna dengan token verifikasi yang sesuai
-      const user = await this.userRepository.findByVerificationToken(token);
+      const user = await UserRepository.findByVerificationToken(token);
       if (!user) {
-        throw new HttpError(400, "Invalid or expired verification token."); // Menggunakan HttpError di sini
+        throw new HttpError(400, "Invalid or expired verification token.");
       }
 
       // Perbarui status verifikasi pengguna
       user.is_verified = true;
       user.verification_token = null; // Hapus token setelah verifikasi
-      await this.userRepository.update(user.id, {
+      await UserRepository.update(user.id, {
         is_verified: user.is_verified,
         verification_token: user.verification_token,
       });
@@ -134,7 +130,7 @@ class AuthService {
       throw new HttpError(
         error.statusCode || 500,
         `Email verification failed: ${error.message}`
-      ); // Menggunakan HttpError di sini
+      );
     }
   }
 
@@ -143,12 +139,12 @@ class AuthService {
     try {
       // Verifikasi refresh token
       const payload = verifyToken(refreshToken, "refresh");
-      const tokenRecord = await this.refreshTokenRepository.findByToken(
+      const tokenRecord = await RefreshTokenRepository.findByToken(
         refreshToken
       );
 
       if (!tokenRecord || tokenRecord.expires_at < new Date()) {
-        throw new HttpError(400, "Invalid or expired refresh token."); // Menggunakan HttpError di sini
+        throw new HttpError(400, "Invalid or expired refresh token.");
       }
 
       // Generate new access token
@@ -159,7 +155,7 @@ class AuthService {
       throw new HttpError(
         error.statusCode || 500,
         `Token refresh failed: ${error.message}`
-      ); // Menggunakan HttpError di sini
+      );
     }
   }
 
@@ -169,7 +165,7 @@ class AuthService {
       const payload = verifyToken(refreshToken, "refresh");
 
       // Cari refresh token yang sesuai di database
-      const tokenRecord = await this.refreshTokenRepository.findByToken(
+      const tokenRecord = await RefreshTokenRepository.findByToken(
         refreshToken
       );
 
@@ -179,44 +175,15 @@ class AuthService {
       }
 
       // Hapus refresh token dari database
-      await this.refreshTokenRepository.deleteByToken(refreshToken);
+      await RefreshTokenRepository.deleteByToken(refreshToken);
+
+      await OAuth2Repository.deleteByUserId(payload.userId);
 
       return { message: "Successfully logged out." };
     } catch (error) {
       throw new HttpError(
         error.statusCode || 500,
         `Logout failed: ${error.message}`
-      );
-    }
-  }
-
-  // Handle Google login
-  async handleGoogleLogin(user, tokens) {
-    try {
-      // Save user and tokens
-      const { accessToken, refreshToken } = tokens;
-      const existingUser = await UserRepository.findByEmail(user.email);
-      if (!existingUser) {
-        await UserRepository.create({
-          username: user.displayName,
-          email: user.email,
-          password: null, // Set null for Google login
-          is_verified: true, // Assume user is verified
-        });
-      }
-
-      // Save refresh token
-      await RefreshTokenRepository.create({
-        user_id: existingUser.id,
-        token: refreshToken,
-        expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-      });
-
-      return { accessToken, refreshToken };
-    } catch (error) {
-      throw new HttpError(
-        error.statusCode || 500,
-        `Google login failed: ${error.message}`
       );
     }
   }

@@ -1,40 +1,45 @@
 import passport from "passport";
 import { Strategy as GoogleStrategy } from "passport-google-oauth20";
 import UserRepository from "../repositories/UserRepository.js";
-import OAuth2Repository from "../repositories/OAuth2Repository.js"; // Tambahkan repository OAuth2
+import OAuth2Repository from "../repositories/OAuth2Repository.js";
 import RefreshTokenRepository from "../repositories/RefreshTokenRepository.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
+import removeSensitiveFields from "../utils/removeSensitiveFields.js";
 
-// Passport configuration for Google OAuth2
+// Konfigurasi Passport dengan Google Strategy
 passport.use(
   new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
       callbackURL: "/api/v1/auth/google/callback",
+      accessType: "offline",
+      scope: ["profile", "email"], // Menentukan scope yang akan diakses
     },
     async (accessToken, refreshToken, profile, done) => {
       try {
         const { emails, displayName } = profile;
         const email = emails[0].value;
 
-        // Find or create user based on Google profile
+        // Temukan atau buat pengguna berdasarkan profil Google
         let user = await UserRepository.findByEmail(email);
+
         if (!user) {
           user = await UserRepository.create({
             username: displayName,
-            email: email,
-            password: null, // Set null for Google login
-            is_verified: true, // Assume user is verified
+            email,
+            password: null, // No password for Google users
+            googleId: profile.id,
+            is_verified: true, // Google login is verified
           });
         }
 
-        // Save OAuth2 tokens
+        // Simpan atau perbarui token OAuth2 di repositori
         await OAuth2Repository.upsert({
           provider: "google",
           access_token: accessToken,
           refresh_token: refreshToken,
-          expires_at: new Date(Date.now() + 3600 * 1000), // Example: 1 hour
+          expires_at: new Date(Date.now() + 3600 * 1000), // 1 hour token expiration
           user_id: user.id,
         });
 
@@ -42,26 +47,27 @@ passport.use(
         const accessTokenJwt = generateAccessToken(user.id);
         const refreshTokenJwt = generateRefreshToken(user.id);
 
-        // Save refresh token to database
+        // Simpan refresh token di database
         await RefreshTokenRepository.create({
           user_id: user.id,
           token: refreshTokenJwt,
           expires_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days expiration
         });
 
-        // Return user and JWT tokens
-        done(null, {
-          user,
-          accessToken: accessTokenJwt, // JWT Access Token
-          refreshToken: refreshTokenJwt, // JWT Refresh Token
+        // Kembalikan user dan JWT tokens
+        return done(null, {
+          user: removeSensitiveFields(user),
+          accessToken: accessTokenJwt,
+          refreshToken: refreshTokenJwt,
         });
       } catch (error) {
-        done(error);
+        return done(error);
       }
     }
   )
 );
 
+// Serialisasi dan deserialisasi pengguna untuk sesi Passport
 passport.serializeUser((user, done) => {
   done(null, user);
 });

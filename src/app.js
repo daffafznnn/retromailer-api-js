@@ -9,6 +9,7 @@ import {
   notFoundHandler,
 } from "./middlewares/ErrorMiddleware.js";
 import AuthRoute from "./routes/AuthRoute.js";
+import EmailRoute from "./routes/EmailRoute.js";
 import dotenv from "dotenv";
 
 dotenv.config({ path: `.env.${process.env.NODE_ENV || "development"}.local` });
@@ -29,6 +30,7 @@ app.use(requestLogger);
 
 // routes
 app.use("/api/v1/auth", AuthRoute);
+app.use("/api/v1/email", EmailRoute);
 
 // error middleware
 app.use(notFoundHandler);

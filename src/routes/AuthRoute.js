@@ -1,28 +1,57 @@
 // src/routes/AuthRoute.js
-import express from "express";
+import { Router } from "express";
+import passport from "passport";
 import AuthController from "../controllers/AuthController.js";
-import passport from "../config/passport.js";
 
-const router = express.Router();
+const router = Router();
 
-router.post("/register", AuthController.registerUser.bind(AuthController));
-router.post("/login", AuthController.loginUser.bind(AuthController));
-router.get("/verify-email", AuthController.verifyEmail.bind(AuthController));
-router.post("/refresh-token", AuthController.refreshToken.bind(AuthController));
-router.post("/logout", AuthController.logoutUser.bind(AuthController));
-// Google login
+// Register user
+router.post("/register", (req, res) => AuthController.registerUser(req, res));
+
+// Login user
+router.post("/login", (req, res) => AuthController.loginUser(req, res));
+
+// Verify email
+router.get("/verify-email", (req, res) => AuthController.verifyEmail(req, res));
+
+// Refresh access token
+router.post("/refresh-token", (req, res) =>
+  AuthController.refreshToken(req, res)
+);
+
+// Google login route
 router.get(
   "/google",
-  passport.authenticate("google", {
-    scope: ["profile", "email"],
-  })
+  passport.authenticate("google", { scope: ["profile", "email"] })
 );
 
-// Rute callback untuk Google OAuth2
+// Google callback route
 router.get(
   "/google/callback",
-  passport.authenticate("google", { session: false }), // Disable session for API response
-  AuthController.googleCallback.bind(AuthController)
+  passport.authenticate("google", { session: false }),
+  (req, res) => {
+    if (!req.user) {
+      return res.status(401).json({
+        status: "error",
+        message: "Authentication failed.",
+      });
+    }
+
+    const { user, accessToken, refreshToken } = req.user;
+
+    res.status(200).json({
+      status: "success",
+      message: "Google login successful",
+      data: {
+        user,
+        accessToken,
+        refreshToken,
+      },
+    });
+  }
 );
+
+// Logout user
+router.post("/logout", (req, res) => AuthController.logoutUser(req, res));
 
 export default router;

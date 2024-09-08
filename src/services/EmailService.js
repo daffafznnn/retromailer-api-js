@@ -15,7 +15,6 @@ const __dirname = dirname(__filename);
 
 class EmailService {
   constructor() {
-    this.userRepository = UserRepository;
     this.transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -37,7 +36,7 @@ class EmailService {
 
     // Save the token to the user's record in the database
     user.verification_token = token;
-    await this.userRepository.update(user.id, { verification_token: token });
+    await UserRepository.update(user.id, { verification_token: token });
 
     // Create a verification URL using req.protocol and req.get('host')
     const verificationUrl = `${req.protocol}://${req.get(

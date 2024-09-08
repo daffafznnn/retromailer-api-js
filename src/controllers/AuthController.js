@@ -1,18 +1,18 @@
 // src/controllers/AuthController.js
 import AuthService from "../services/AuthService.js";
 import handleError from "../utils/handleErrorController.js";
+import removeSensitiveFields from "../utils/removeSensitiveFields.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
 
 class AuthController {
   constructor() {
-    this.authService = AuthService;
     this.handleError = handleError;
   }
 
   // Handle registration
   async registerUser(req, res) {
     try {
-      const user = await this.authService.registerUser(req.body, req);
+      const user = await AuthService.registerUser(req.body, req);
       res.status(201).json({
         status: true,
         payload: user,
@@ -28,7 +28,7 @@ class AuthController {
     const { email, password } = req.body;
 
     try {
-      const { accessToken, refreshToken } = await this.authService.loginUser(
+      const { accessToken, refreshToken } = await AuthService.loginUser(
         email,
         password
       );
@@ -47,7 +47,7 @@ class AuthController {
     const { token } = req.query;
 
     try {
-      const user = await this.authService.verifyEmail(token);
+      const user = await AuthService.verifyEmail(token);
       res.status(200).json({
         status: true,
         payload: user,
@@ -63,7 +63,6 @@ class AuthController {
     const { refreshToken } = req.body;
 
     try {
-      // Validasi input
       if (!refreshToken) {
         return res.status(400).json({
           status: false,
@@ -71,7 +70,7 @@ class AuthController {
         });
       }
 
-      const { accessToken } = await this.authService.refreshAccessToken(
+      const { accessToken } = await AuthService.refreshAccessToken(
         refreshToken
       );
       res.status(200).json({
@@ -84,31 +83,11 @@ class AuthController {
     }
   }
 
-  // Handle Google login
-  async googleLogin(req, res) {
-    const user = req.user; // user info from Google
-
-    try {
-      const accessToken = generateAccessToken(user.id);
-      const refreshToken = generateRefreshToken(user.id);
-
-      // Optionally, you can save the refresh token to the database here
-
-      res.json({
-        status: true,
-        payload: { accessToken, refreshToken },
-        message: "Google login successful.",
-      });
-    } catch (error) {
-      this.handleError(res, error);
-    }
-  }
-
+  // Handle logout
   async logoutUser(req, res) {
     const { refreshToken } = req.body;
 
     try {
-      // Validasi input
       if (!refreshToken) {
         return res.status(400).json({
           status: false,
@@ -116,33 +95,13 @@ class AuthController {
         });
       }
 
-      // Hapus refresh token dari database
-      await this.authService.logoutUser(refreshToken);
+      await AuthService.logoutUser(refreshToken);
       res.status(200).json({
         status: true,
         message: "Logout successful and refresh token deleted.",
       });
     } catch (error) {
       this.handleError(res, error);
-    }
-  }
-
-  // Google login callback
-  async googleCallback(req, res) {
-    try {
-      const { user, accessToken, refreshToken } = req.user;
-      const tokens = await AuthService.handleGoogleLogin(user, {
-        accessToken,
-        refreshToken,
-      });
-
-      res.status(200).json({
-        message: "Login successful",
-        user: user,
-        tokens: tokens,
-      });
-    } catch (error) {
-      res.status(error.statusCode || 500).json({ message: error.message });
     }
   }
 }
